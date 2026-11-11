@@ -53,6 +53,9 @@ d["base_net"] = pos_b * j.CN_IN - pos_b.abs() * cost
 d = d.loc[START:].dropna(subset=["pos_A", "CN_IN"])
 d[["A_gross", "A_net", "base_net"]] = d[["A_gross", "A_net", "base_net"]].fillna(0)
 d.to_csv(TAB / "soy_ruleA_daily.csv")
+# buy & hold the underlying: long DCE soybean main contract, close-to-close on the DCE calendar.
+# Roll days (contract switch in the Sina series) are set to 0 ~ a roll-adjusted hold; no costs.
+bh = cnr["D"].loc[d.index[0]:end].fillna(0)
 
 
 def summary(p, pos):
@@ -65,19 +68,21 @@ def summary(p, pos):
                 sharpe=p.mean() / p.std() * np.sqrt(len(p) / yrs), maxdd_bp=1e4 * (eq - eq.cummax()).min())
 
 
-S = {"A": summary(d.A_net, d.pos_A), "base": summary(d.base_net, d.base_net.where(d.base_net == 0, 1))}
+S = {"A": summary(d.A_net, d.pos_A), "base": summary(d.base_net, d.base_net.where(d.base_net == 0, 1)),
+     "bh": summary(bh, pd.Series(1, index=bh.index))}
 for k, v in S.items():
     print(k, {a: round(b, 2) for a, b in v.items()})
 yearly = d.groupby(d.index.year).agg(trades=("pos_A", lambda x: int((x != 0).sum())),
                                      ruleA_net_pct=("A_net", lambda x: 100 * x.sum()),
                                      baseline_net_pct=("base_net", lambda x: 100 * x.sum()))
+yearly["buyhold_pct"] = 100 * bh.groupby(bh.index.year).sum()
 print(yearly.round(1).to_string())
 
 THEMES = {
     "light": dict(surf="#fcfcfb", ink="#0b0b0b", ink2="#52514e", muted="#8f8e8a", grid="#e4e3df",
-                  s1="#2a78d6", s2="#eb6834", dd="#e34948"),
+                  s1="#2a78d6", s2="#eb6834", s3="#1baf7a", dd="#e34948"),
     "dark": dict(surf="#1a1a19", ink="#f0efec", ink2="#c3c2b7", muted="#8f8e8a", grid="#383835",
-                 s1="#3987e5", s2="#d95926", dd="#e66767"),
+                 s1="#3987e5", s2="#d95926", s3="#199e70", dd="#e66767"),
 }
 for theme, t in THEMES.items():
     plt.rcParams.update({"figure.facecolor": t["surf"], "axes.facecolor": t["surf"], "savefig.facecolor": t["surf"],
@@ -95,13 +100,15 @@ for theme, t in THEMES.items():
              color=t["ink2"], va="top")
     eqA, eqB = 100 * d.A_net.cumsum(), 100 * d.base_net.cumsum()
     ax.plot(eqB.index, eqB.values, color=t["muted"], lw=1.4, label="benchmark: same fade, every day, US vs its median (net)")
+    eqH = 100 * bh.cumsum()
+    ax.plot(eqH.index, eqH.values, color=t["s3"], lw=1.4, label="buy & hold DCE soybeans (close-to-close, no costs)")
     ax.plot(eqA.index, eqA.values, color=t["s1"], lw=2.2, label="Rule A: |US move| ≥ 1σ (net)")
     ax.axhline(0, color=t["ink2"], lw=0.8)
 
     ax.set_ylabel("cumulative return, %")
     ax.legend(loc="upper left", fontsize=8.5)
     a = S["A"]
-    ax.text(0.015, 0.70, f"Rule A: {a['trades']} trades ({a['per_year']:.0f}/yr) · {a['bp_trade']:+.1f} bp/trade "
+    ax.text(0.55, 0.45, f"Rule A: {a['trades']} trades ({a['per_year']:.0f}/yr) · {a['bp_trade']:+.1f} bp/trade "
             f"(t {a['t']:.1f})\nhit {100 * a['hit']:.0f}% · {a['ann_bp'] / 100:+.1f}%/yr · Sharpe {a['sharpe']:.2f} · "
             f"max DD {a['maxdd_bp'] / 100:.1f}%", transform=ax.transAxes, fontsize=8.5, color=t["ink"], va="top")
     for y, r in yearly.iterrows():
@@ -114,9 +121,10 @@ for theme, t in THEMES.items():
     axd.xaxis.set_major_locator(mdates.YearLocator())
     axd.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
     axd.tick_params(axis="x", length=0)
-    b = S["base"]
+    b, h = S["base"], S["bh"]
     fig.text(0.08, 0.012, f"Benchmark (every-day median-split fade): {b['ann_bp'] / 100:+.1f}%/yr, Sharpe {b['sharpe']:.2f}, max DD "
-             f"{b['maxdd_bp'] / 100:.1f}%.\nIn-sample research result: the start date and rule were chosen after "
+             f"{b['maxdd_bp'] / 100:.1f}%. Buy & hold: {h['ann_bp'] / 100:+.1f}%/yr, Sharpe {h['sharpe']:.2f}, max DD "
+             f"{h['maxdd_bp'] / 100:.1f}%.\nIn-sample research result: the start date and rule were chosen after "
              "seeing this period.", fontsize=8, color=t["ink2"])
     fig.savefig(DOCS / f"6_soy_equity_{theme}.png", dpi=170)
     plt.close(fig)

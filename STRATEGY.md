@@ -50,23 +50,25 @@ Every strategy here uses the same execution: enter at the DCE open on day *t+1*,
 | **Rule A** | Fade the US move only when \|z\| ≥ 1, otherwise flat (about 27% of days) | — |
 | **Benchmark: every-day median-split fade** (*"trade every day"*) | **Every** trading day: short DCE if the CBOT soybean return on day *t* was above its historical median (expanding window, ≥250 days), long if below. Always in the market. | Does the 1σ filter add value? This is the paper's median-quantile (α = 0.5) finding traded directly, with the same direction and execution as Rule A. The only difference is the filter. |
 | **Passive: long open → close every day** | Buy DCE soybeans at every open, sell at the close, ignoring the US entirely | Is Rule A just picking up an intraday drift in DCE soybeans? |
+| **Buy & hold DCE soybeans** | Hold the main contract every day, close to close (roll days set to 0, no costs) | Does an active strategy beat simply owning the underlying? Note that this carries overnight risk, which the intraday strategies don't. |
 | **Cash** | No position | The zero line. Every strategy has to beat it after costs. |
 
 ### Results
-| | Rule A | Every-day median-split fade | Passive long open→close |
-|---|---|---|---|
-| Days in the market | 317 (64/yr) | 1,162 (all) | 1,162 (all) |
-| Per trade | **+11.4 bp** (t 2.6) | −0.1 bp | −4.0 bp |
-| Hit rate | 60% | 52% | — |
-| Return / yr | **+7.3%** | −0.3% | −9.4% (+1.2% before costs) |
-| Sharpe | **1.16** | −0.03 | −0.89 |
-| Max drawdown | −8.0% | −40.9% | −51.9% |
+| | Rule A | Every-day median-split fade | Passive long open→close | Buy & hold DCE soybeans |
+|---|---|---|---|---|
+| Days in the market | 317 (64/yr) | 1,162 (all) | 1,162 (all) | 1,203 (all, incl. overnight) |
+| Per trade / day | **+11.4 bp** (t 2.6) | −0.1 bp | −4.0 bp | +0.75 bp/day (t 0.3) |
+| Hit rate | 60% | 52% | — | 51% of days up |
+| Return / yr | **+7.3%** | −0.3% | −9.4% (+1.2% before costs) | +1.8% (no costs) |
+| Sharpe | **1.16** | −0.03 | −0.89 | 0.13 |
+| Max drawdown | −8.0% | −40.9% | −51.9% | −15.1% |
 
 **Reading it:**
 - The direction signal alone (the every-day fade) has no net edge after 2010, so all of Rule A's value comes from *which days* it trades.
 - There's no meaningful intraday drift to explain the result: the passive long earns +1.2%/yr before costs and loses money after.
+- **Simply owning the underlying** made +1.8%/yr (Sharpe 0.13) with a −15% drawdown. Soybeans went roughly sideways over 2010–14. Rule A made about 4× the return with about half the drawdown, and it's flat overnight. It's only loosely tied to market direction (correlation with buy & hold: 0.04 daily, 0.28 monthly): in 2013 buy-and-hold lost 9.3% while Rule A was flat, and in 2011 buy-and-hold lost 7.1% while Rule A made 2.6%.
 
-By year: 2010 −0.5%, 2011 +2.6%, **2012 +14.1%**, 2013 −0.4%, **2014 +20.3%**. Two of the five years produce nearly all the return. With only 317 trades, that concentration is a real risk.
+By year, Rule A vs buy & hold: 2010 −0.5% vs +9.0%, 2011 +2.6% vs −7.1%, **2012 +14.1%** vs +7.1%, 2013 −0.4% vs −9.3%, **2014 +20.3%** vs +9.3%. Two of the five years produce nearly all the return. With only 317 trades, that concentration is a real risk.
 
 ## 4. Why we can't trust it yet
 1. **It's in-sample.** The 1σ threshold, the 2010 start and the choice of soybeans were all made after seeing results that included this period.

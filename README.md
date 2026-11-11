@@ -54,7 +54,7 @@ The overreaction shrank by about 60% after 2010, in every commodity, and volatil
 </picture>
 
 **Rule A:** when CBOT soybeans close up or down at least 1σ (trailing 60-day vol), take the *opposite* side in DCE soybeans at the next open, and exit at that day's close. Otherwise stay flat.
-- **2010 to Dec 2014:** 317 trades, +11.4 bp/trade net (t 2.6), +7.3%/yr, Sharpe 1.16, max drawdown −8%. The benchmark, the same fade traded every day (short DCE after an above-median US day, long after a below-median one), made −0.3%/yr with a −41% drawdown. Passively buying DCE's open and selling its close made −9.4%/yr after costs.
+- **2010 to Dec 2014:** 317 trades, +11.4 bp/trade net (t 2.6), +7.3%/yr, Sharpe 1.16, max drawdown −8%. The benchmark, the same fade traded every day (short DCE after an above-median US day, long after a below-median one), made −0.3%/yr with a −41% drawdown. Passively buying DCE's open and selling its close made −9.4%/yr after costs, and buy-and-hold of DCE soybeans made +1.8%/yr (Sharpe 0.13, −15% drawdown).
 - **Why these rules:** China's open overreacts to the US move, and only on big moves is the reversal larger than costs. Soybeans decayed least of the four commodities.
 - **Caveats:** this is in-sample, most of the return comes from 2012 and 2014, and it can't be run as built after the Dec 2014 night session.
 
