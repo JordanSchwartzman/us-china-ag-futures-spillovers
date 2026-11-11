@@ -47,9 +47,23 @@ These numbers come from different data (free Sina and Yahoo series vs the paper'
 
 The overreaction shrank by about 60% after 2010, in every commodity, and volatile markets didn't bring it back. That points to the market maturing, not a temporary regime. Trading only on US moves of at least 1σ still worked for soybeans through 2014 (about +11 bp/trade net). But soybeans now have a night session, and a 2026 pilot at today's equivalent entry, the 09:00 Beijing open, shows no reversal. Details are in [REPORT.md](REPORT.md#why-the-tradable-leg-lost-its-edge-scripts07_t1_diagnosispy).
 
+### 6. The surviving rule: soybeans, only after a ≥1σ US move (2010–2014)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/6_soy_equity_dark.png">
+  <img alt="Soybean Rule A net equity curve 2010-2014 vs trading every day" src="docs/figures/6_soy_equity_light.png">
+</picture>
+
+**Rule A:** when CBOT soybeans close up or down at least 1σ (trailing 60-day vol), take the *opposite* side in DCE soybeans at the next open, and exit at that day's close. Otherwise stay flat.
+- **2010 to Dec 2014:** 317 trades, +11.4 bp/trade net (t 2.6), +7.3%/yr, Sharpe 1.16, max drawdown −8%. The benchmark, the same fade traded every day (short DCE after an above-median US day, long after a below-median one), made −0.3%/yr with a −41% drawdown. Passively buying DCE's open and selling its close made −9.4%/yr after costs.
+- **Why these rules:** China's open overreacts to the US move, and only on big moves is the reversal larger than costs. Soybeans decayed least of the four commodities.
+- **Caveats:** this is in-sample, most of the return comes from 2012 and 2014, and it can't be run as built after the Dec 2014 night session.
+
+**[STRATEGY.md](STRATEGY.md)** has the full rules, the reasoning behind each one, what was rejected, and how we'd test whether it still works with more data.
+
 ---
 
 ## More detail
+- **[STRATEGY.md](STRATEGY.md)** has the trading rules and their rationale, plus the validation plan for more data.
 - **[REPORT.md](REPORT.md)** has full results, trade statistics, data caveats, and the one hypothesis still worth testing.
 - **[PAPER_NOTES.md](PAPER_NOTES.md)** has the page-by-page summary of the paper, its method, its data, and every target number.
 - **`output/`** has all the replication figures (the paper's Figs 4–11 equivalents) and the CSV tables.
@@ -73,6 +87,7 @@ python scripts/03_rolling.py
 python scripts/05_trade.py
 python scripts/06_readme_figures.py           # regenerates charts 1-4
 python scripts/07_t1_diagnosis.py             # why the fade decayed + modern 09:00-open pilot (chart 5)
+python scripts/08_soy_equity.py               # soybean Rule A equity curve, 2010-2014 (chart 6)
 ```
 `src/quantilogram.py` is a standalone numba implementation of the cross-quantilogram and portmanteau test (Han, Linton, Oka & Whang), with stationary-bootstrap inference.
 

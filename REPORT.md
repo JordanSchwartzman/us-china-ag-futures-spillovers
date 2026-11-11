@@ -98,3 +98,6 @@ In the night-session era, the CN contract that trades **after** the US close is 
 **5. This legacy trade can't be run today.** Soybeans have had a night session since Dec 2014 (corn since 2019). The modern equivalent is the **09:00 Beijing day-session open**, the first CN price after the US close.
 - **Pilot (5 pairs: A/ZS, M/ZM, Y/ZL, C/ZC, SR/SB; Mar–Nov 2026; 819 obs):** the US move after the CN night close (15:00 UTC → US close) *is* priced in at 09:00, with pass-through significant in all 5 pairs. But there's **no reversal**: pooled standardized slope +0.02 ± 0.08. That rules out the 2006–09 effect size (−0.14) but not the post-2010 size (−0.06).
 - *Verdict:* no tradable fade in today's structure on current evidence. The pilot has low power, so the honest next step is to collect CN 60-min bars going forward (Sina only serves about 8 months) or buy history, then retest at n ≈ 2,000.
+
+## The surviving rule and next steps
+The soybean Rule A specification, the reasoning behind each rule, the 2010–2014 equity curve (+11.4 bp/trade net, t 2.6, Sharpe 1.16), and the validation plan for when more data is available are all in **[STRATEGY.md](STRATEGY.md)**.
