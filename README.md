@@ -86,6 +86,13 @@ The top row is the paper's setting (its Fig. 3): US futures trade while China is
 
 All 72 lag-1 cells from Tables V and VI line up with the published values. Every sign disagreement is on a cell the paper itself reports as ≈0. The paper-sample figures equivalent to its Figs 4–11 are in [`output/figs/paper/`](output/figs/paper) and [`output/figs/rolling/`](output/figs/rolling).
 
+### 1.3 All quantile pairs at once (heatmap)
+![Lag-1 cross-quantilogram over all 25 quantile pairs, 2005-2014](output/figs/paper/fn9_alpha_grid.png)
+
+Each panel is a 5×5 grid. The x-axis is the predictor market's quantile on day *t*, the y-axis is the target market's quantile the next day, and the color is the lag-1 cross-quantilogram (`*` = significant at 5%). The paper mentions running all 25 pairs (its footnote 9) but doesn't show them.
+- **Crashes spill over more than rallies.** The strongest US→China cells are in the bottom-left, where both markets are in their lower tails: soybeans 0.19 and sugar 0.22 at 0.1/0.1. That's the downside asymmetry the paper describes.
+- **US→China is stronger than China→US,** and wheat and corn are weaker throughout.
+
 ---
 
 ## Part 2. Beyond the paper: my extensions
@@ -108,6 +115,15 @@ The paper stops in 2014 and makes no trading claims. Everything in this part is 
 
 - **Blue (paper era, replicated):** US day *t* predicts China's overnight return strongly. China's daytime session then partly reverses it.
 - **Orange (2014–2026, new):** the daily spillover persists, and in sugar it got stronger. But it moved out of "overnight" into "intraday". Once China's open prints during US hours (night sessions from Dec 2014), that's exactly what the timing predicts. Seeing it in data the authors never had is the strongest evidence the effect is real.
+
+**The same heatmap for 2014–2026:**
+
+![Lag-1 cross-quantilogram over all 25 quantile pairs, 2014-2026](output/figs/oos/fn9_alpha_grid.png)
+
+- **The downside asymmetry is gone.** Soybeans' US→China link is weaker and roughly even across quantiles (0.05–0.12).
+- **Sugar's link got much stronger** and moved to the middle of the distribution (up to 0.27 at the median).
+- **China→US has mostly faded:** corn and sugar are near zero, and soybeans are small.
+- Wheat is excluded because China's wheat contract has been illiquid since about 2015.
 
 ### 2.2 Tradability: an in-sample edge that went to zero
 <picture>
