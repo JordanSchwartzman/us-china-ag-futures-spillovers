@@ -8,9 +8,8 @@ This repo replicates Jiang, Su, Todorova & Roca (2016), *Spillovers and Directio
 
 | | What | Status | Where |
 |---|---|---|---|
-| **Part 1. Replication** | Re-doing the paper's own analysis: cross-quantilogram, decomposition into overnight and intraday, auto-quantilograms, rolling windows | ✅ Done. Matches the published tables (r = 0.97 / 0.81) | [Part 1](#part-1-replication-what-the-paper-did) · [PAPER_NOTES.md](PAPER_NOTES.md) |
-| **Part 2. Beyond the paper** | My extensions: test out of sample to 2026, check whether it's tradable, diagnose why the edge decayed, find a surviving rule, pilot the modern market structure | ✅ Done on free data | [Part 2](#part-2-beyond-the-paper-my-extensions) · [REPORT.md](REPORT.md) · [STRATEGY.md](STRATEGY.md) |
-| **Part 3. Next steps** | Testing whether the strategy still works today. Needs Chinese intraday history | ⏳ Not started (data-limited) | [Part 3](#part-3-next-steps-not-done-yet) |
+| **Part 1. Replication** | Re-doing the paper's own analysis: cross-quantilogram, decomposition into overnight and intraday, auto-quantilograms, rolling windows | Done. Matches the published tables (r = 0.97 / 0.81) | [Part 1](#part-1-replication-what-the-paper-did) · [PAPER_NOTES.md](PAPER_NOTES.md) |
+| **Part 2. Beyond the paper** | My extensions: test out of sample to 2026, check whether it's tradable, diagnose why the edge decayed, find a surviving rule, pilot the modern market structure | Done on free data | [Part 2](#part-2-beyond-the-paper-my-extensions) · [REPORT.md](REPORT.md) · [STRATEGY.md](STRATEGY.md) |
 
 ---
 
@@ -55,13 +54,13 @@ When both markets use the same α, there's a direct translation into probabiliti
 
 | Paper item | What it shows | Replicated? |
 |---|---|---|
-| Tab III / IV | Samples and descriptive statistics | ✅ Same structure. My sample is shorter (see below). |
-| Figs 4–5 | Cross-quantilograms, lags 1–20, US→CN and CN→US | ✅ Same pattern: a significant 1-day effect only, stronger US→CN |
-| Figs 6–7 | Auto-quantilograms (self-predictability) | ✅ Same. Also visible: tail clustering at longer lags (volatility clustering), which the paper doesn't discuss |
-| **Tab V** | US daily → CN daily / overnight / intraday at lag 1 | ✅ **r = 0.97 with the published values**. CN overnight ≈ 2× daily, CN intraday negative at the median. |
-| **Tab VI** | CN daily → US daily / overnight / intraday at lag 1 | ✅ **r = 0.81**, all signs match |
-| Figs 8–11 | Rolling 2-year windows | ✅ Same: strongest in the 2008–09 crisis, US→CN most persistent for soybeans and sugar |
-| Footnote 9 | All 25 quantile pairs | ✅ Reproduced as a heatmap |
+| Tab III / IV | Samples and descriptive statistics | Yes. Same structure. My sample is shorter (see below). |
+| Figs 4–5 | Cross-quantilograms, lags 1–20, US→CN and CN→US | Yes. Same pattern: a significant 1-day effect only, stronger US→CN |
+| Figs 6–7 | Auto-quantilograms (self-predictability) | Yes. Also visible: tail clustering at longer lags (volatility clustering), which the paper doesn't discuss |
+| **Tab V** | US daily → CN daily / overnight / intraday at lag 1 | Yes. **r = 0.97 with the published values**. CN overnight ≈ 2× daily, CN intraday negative at the median. |
+| **Tab VI** | CN daily → US daily / overnight / intraday at lag 1 | Yes. **r = 0.81**, all signs match |
+| Figs 8–11 | Rolling 2-year windows | Yes. Same: strongest in the 2008–09 crisis, US→CN most persistent for soybeans and sugar |
+| Footnote 9 | All 25 quantile pairs | Yes. Reproduced as a heatmap |
 
 **The paper's conclusion I confirm:** US moves spill into China the next day, mainly through China's *overnight* return (close → next open), and China's daytime session partly reverses that.
 
@@ -155,36 +154,15 @@ Since Dec 2014, the first Chinese price after the US close is the **09:00 day-se
 - There's **no reversal**: pooled slope +0.02 ± 0.08.
 - For soybeans, Rule A's modern version lost money on 38 trades.
 
-That's too small a sample to conclude anything, which is what Part 3 is for.
+That's too small a sample to conclude anything.
 
----
+### Next steps
+The open question is whether Rule A, or its opposite, works in today's market structure. The next steps would be:
+1. Get Chinese 1-minute history from 2010 (the free sources keep only about 8 months).
+2. Re-run 2010–14 on clean intraday data.
+3. Test the modern version, trading the 09:00 open after the US move that follows China's night close, under rules fixed in advance.
 
-## Part 3. Next steps (not done yet)
-
-The open question is **whether Rule A, or its opposite, works in today's market structure.** Answering it needs data that isn't free.
-
-**Data I'd need**
-- **Chinese 1-minute bars, 2010 → now,** for DCE soybeans, soymeal and soyoil, corn, and ZCE sugar. This is the binding constraint: free sources keep only about 8 months. Vendors: Wind, TqSdk, JoinQuant, RiceQuant, Tushare Pro.
-- **CBOT intraday, 2010 → now:** Databento.
-- **Chinese order-book data at the open and close,** for realistic fills.
-
-**How I'd validate it**
-1. **Pre-register:** freeze the rule and the pass/fail criteria in a commit *before* touching new data.
-2. **Re-run 2010–14 on clean intraday data.** If the edge disappears, it was a free-data artifact. Stop.
-3. **Test the modern version:** signal = the US move after China's night close; trade = 09:00 → 15:00. This is the real out-of-sample test.
-4. **Robustness:** vary the threshold (0.75–1.5σ), the vol window, and entry/exit timing. Results should form a plateau, not a spike.
-5. **Other markets:** repeat on soymeal, soyoil, corn and sugar.
-6. **Adjust the statistics for every variant tried:** White's Reality Check or Hansen's SPA, and a deflated Sharpe ratio.
-7. **Walk-forward:** refit only the threshold once a year on past data.
-8. **Execution:** model auction fills, limit-move days, fees and capacity.
-9. **Paper trade forward for 6–12 months,** using a daily data collector.
-10. **Set kill criteria** before any live trading.
-
-**What would change my mind:**
-- **Pursue it:** clean data confirms 2010–14, *and* the 09:00-open version shows a reversal with t < −2.
-- **Drop it:** either one fails. The US → China spillover would then be information, not a trade.
-
-Full detail is in [STRATEGY.md](STRATEGY.md#next-steps-how-wed-check-whether-this-still-works).
+The full data list and validation plan are in [STRATEGY.md](STRATEGY.md#next-steps-how-wed-check-whether-this-still-works).
 
 ---
 
@@ -199,7 +177,7 @@ Full detail is in [STRATEGY.md](STRATEGY.md#next-steps-how-wed-check-whether-thi
 ## Documents
 - **[PAPER_NOTES.md](PAPER_NOTES.md):** the paper page by page, its method and data, and every target number (Part 1).
 - **[REPORT.md](REPORT.md):** full results for the replication, out-of-sample tests, trade tests and diagnosis (Parts 1–2).
-- **[STRATEGY.md](STRATEGY.md):** the trading rules and why, benchmarks, and the validation plan (Parts 2.4 and 3).
+- **[STRATEGY.md](STRATEGY.md):** the trading rules and why, benchmarks, and the validation plan for next steps (Part 2.4).
 - **`output/`:** all figures and CSV tables.
 
 ## Run
