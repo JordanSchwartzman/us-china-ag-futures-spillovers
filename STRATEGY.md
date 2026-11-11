@@ -117,6 +117,30 @@ By year, Rule A vs buy & hold: 2010 −0.5% vs +9.0%, 2011 +2.6% vs −7.1%, **2
    - Run 6–12 months of paper trades and compare them with the backtest's distribution.
 10. **Kill criteria for live trading.** Stop if the rolling 250-trade t-stat drops below 0, or if the trailing two-year reversal slope's confidence interval contains 0 for two consecutive quarters.
 
+### A separate idea: ICE vs ZCE sugar pair trade (minute data)
+This isn't Rule A. It came out of the 2014–2026 heatmap, where sugar is the most tightly linked pair (lag-1 ρ up to 0.27).
+
+**Why it might work.** A pilot on free hourly data (Mar–Nov 2026, 162 nights) showed:
+- ZCE prices the ICE move in **instantly** at its 21:00 Beijing night open (t 6.0).
+- The two markets **move together** during the overlap (13:00–15:00 UTC, t 5.7).
+- There's **no drift afterwards**, so carrying the ICE move into China failed: 29 trades, −3.9 bp gross.
+- The link runs **one way**: ICE leads and China follows (China→US ρ ≈ 0).
+
+If ZCE reacts to ICE with a lag of minutes rather than seconds, the spread between them should widen briefly and then close. Trading it back toward normal would be a lead-lag or pairs strategy.
+
+**What to test, in order**
+1. **Lead-lag at 1-minute lags** during the overlap: cross-correlation, plus a cross-quantilogram at minute lags with the same engine as this repo. Does ICE lead, and by how long?
+2. **Build the spread:** convert ICE #11 (cents/lb, USD) to RMB/tonne with USD/CNH, estimate a rolling hedge ratio within the overlap, and measure how fast deviations close (the half-life).
+3. **Cost-adjusted backtest** over both legs plus FX, entering when the spread is unusually wide and exiting when it normalizes. Use only the overlap window.
+
+**Hurdles**
+- **Different products.** ICE #11 is raw cane sugar and ZCE is white sugar, separated by refining margins and China's import tariffs. The spread can drift for months, so only intraday convergence is a candidate.
+- **The window is short:** about 2 hours a day.
+- **Access.** Check whether foreign accounts can trade ZCE sugar at all, given China's restrictions on foreign participation.
+- **Speed.** If ZCE catches up within seconds, this is a latency game that 1-minute bars can't capture.
+
+**Data needed:** ZCE sugar 1-minute or tick data, ICE sugar #11 1-minute data, and USD/CNH 1-minute data, ideally 2015 onwards.
+
 ### What would change our mind
 - **Encouraging:** the clean-data rerun of 2010–14 holds, and the modern 09:00-open version shows a negative reversal slope with t < −2 across the soy complex.
 - **Kill it:** clean data erases the 2010–14 edge, or the modern version's confidence interval stays centered on zero after about 2,000 observations. In that case the market has fully adapted, and the remaining value is the cross-market *pass-through* (US → CN daily spillover), which is information, not a trade.

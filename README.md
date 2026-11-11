@@ -10,6 +10,7 @@ This repo replicates Jiang, Su, Todorova & Roca (2016), *Spillovers and Directio
 |---|---|---|---|
 | **Part 1. Replication** | Re-doing the paper's own analysis: cross-quantilogram, decomposition into overnight and intraday, auto-quantilograms, rolling windows | Done. Matches the published tables (r = 0.97 / 0.81) | [Part 1](#part-1-replication-what-the-paper-did) · [PAPER_NOTES.md](PAPER_NOTES.md) |
 | **Part 2. Beyond the paper** | My extensions: test out of sample to 2026, check whether it's tradable, diagnose why the edge decayed, find a surviving rule, pilot the modern market structure | Done on free data | [Part 2](#part-2-beyond-the-paper-my-extensions) · [REPORT.md](REPORT.md) · [STRATEGY.md](STRATEGY.md) |
+| **Next steps** | Test the soybean rule in today's market structure, and an ICE vs ZCE sugar pair trade | Not started (needs minute-level data) | [Next steps](#next-steps) · [STRATEGY.md](STRATEGY.md) |
 
 ---
 
@@ -172,13 +173,74 @@ Since Dec 2014, the first Chinese price after the US close is the **09:00 day-se
 
 That's too small a sample to conclude anything.
 
-### Next steps
-The open question is whether Rule A, or its opposite, works in today's market structure. The next steps would be:
-1. Get Chinese 1-minute history from 2010 (the free sources keep only about 8 months).
-2. Re-run 2010–14 on clean intraday data.
-3. Test the modern version, trading the 09:00 open after the US move that follows China's night close, under rules fixed in advance.
+---
 
-The full data list and validation plan are in [STRATEGY.md](STRATEGY.md#next-steps-how-wed-check-whether-this-still-works).
+## Next steps
+
+Everything in Part 2 used free data, and two questions can't be answered without minute-level history. These are the next steps, none of which has been started.
+
+### Data needed
+| Data | What it unlocks | Possible sources |
+|---|---|---|
+| Chinese 1-minute (or tick) bars, 2010 → now: DCE soybeans, soymeal, soyoil, corn; ZCE sugar. Including the opening auction and the night session. | The 09:00-open version of Rule A, clean entry prices, and the sugar lead-lag test. **This is the binding constraint:** free sources keep only about 8 months. | Wind, TqSdk, JoinQuant, RiceQuant, Tushare Pro |
+| CBOT 1-minute bars, 2010 → now (ZS, ZM, ZL, ZC) | The exact US move after China's night close | Databento |
+| ICE sugar #11 1-minute bars, and USD/CNH 1-minute | The sugar pair-trade spread | ICE data or a vendor; an FX data vendor |
+| Chinese order-book data at the open and close | Realistic fills, slippage and capacity | Tick-level vendor data |
+
+### 1. Does the soybean rule still work today?
+The question is whether Rule A, or its opposite, works now that China's first price after the US close is the 09:00 day-session open.
+1. **Pre-register.** Freeze the rule, the main metric and the pass/fail criteria in a commit *before* touching new data. Pass means:
+   - net bp/trade above 0 with t above 2 from 2015 onward,
+   - positive in at least 60% of years,
+   - still positive at double the assumed costs.
+2. **Re-run 2010–14 on clean intraday data.** If the +11 bp/trade disappears with clean opening prices, it was an artifact of the free data, and the work stops there.
+3. **Test the modern version.** Signal: the US move after China's night close. Trade: the 09:00 → 15:00 session. First look at the minute-by-minute response after the open, then decide whether to exit early.
+4. **Robustness.** Vary the threshold (0.75–1.5σ), the volatility window (20/60/120 days) and the entry/exit timing. Results should form a plateau, not a spike.
+5. **Other markets.** Repeat on soymeal, soyoil, corn and sugar.
+6. **Adjust the statistics for every variant tried:** White's Reality Check or Hansen's SPA, and a deflated Sharpe ratio.
+7. **Walk-forward.** Refit only the threshold once a year, using past data only.
+8. **Execution.** Model auction fills, limit-up/limit-down days (when you can't trade), fees, and capacity relative to opening volume.
+9. **Paper trade forward for 6–12 months** with a daily data collector, and compare the results with the backtest.
+10. **Set kill criteria before going live:** stop if the rolling 250-trade t-stat drops below 0.
+
+**What would change my mind:**
+- **Pursue it:** clean data confirms 2010–14, *and* the 09:00-open version shows a reversal with t < −2 across the soy complex.
+- **Drop it:** either one fails. The US → China spillover would then be information, not a trade.
+
+### 2. ICE vs ZCE sugar pair trade
+The 2014–2026 sugar heatmap is dark mostly because the two markets now trade the same news *at the same time*: ZCE's night session (13:00–15:00 UTC) overlaps ICE's trading hours. A pilot on free hourly data (Mar–Nov 2026, 162 nights, [`scripts/09_sugar_overlap_pilot.py`](scripts/09_sugar_overlap_pilot.py)) found:
+- ZCE prices in ICE's move **instantly** at its night open (t 6.0).
+- The two **move together** during the overlap (t 5.7).
+- There's **no drift afterwards.** Carrying the ICE move into China failed: 29 trades, −3.9 bp before costs.
+- ICE leads and China follows; there's no effect from China to the US.
+
+If ZCE lags ICE by even a few minutes, the spread between them should briefly widen and then close. Trading it back toward normal could be a strategy.
+
+**Next steps for this idea**
+1. **Check access first.** Confirm whether a foreign account can trade ZCE sugar, and through which channel. If it can't, the idea is only research, so decide that before buying any data.
+2. **Get the data.** ZCE sugar 1-minute or tick bars, ICE sugar #11 1-minute bars, and USD/CNH 1-minute bars, from December 2014 onward (when ZCE sugar's night session began).
+3. **Pre-register.** Before looking at the new data, commit the test, the main metric and pass/fail criteria. Pass means:
+   - net profit per trade above 0 with t above 2,
+   - positive in at least 60% of years,
+   - still positive at double the assumed costs.
+4. **Measure the lead-lag.** During the 13:00–15:00 UTC overlap, compute the cross-correlation and this repo's cross-quantilogram at 1-, 2-, 5- and 10-minute lags. Does ICE lead ZCE, and by how many minutes? If the lead is under a minute, stop: it's a speed race 1-minute data can't capture.
+5. **Build the spread.** Convert ICE (US cents/lb) to RMB/tonne with USD/CNH, estimate a rolling hedge ratio within the overlap, and measure how quickly gaps close (the half-life). Only a spread that closes within the 2-hour window is tradable.
+6. **Backtest after costs.** Enter when the spread is unusually wide, exit when it normalizes or at the end of the overlap. Count both legs, the FX conversion and slippage. No positions are carried outside the overlap.
+7. **Robustness.** Vary the entry threshold, the hedge-ratio window and the lag. Results should form a plateau, not a spike. Split the results by year and by volatility regime.
+8. **A one-leg version.** If trading both legs isn't practical, test trading ZCE alone in the direction ICE implies. That's the same signal with half the cost.
+9. **Paper trade forward** for 3–6 months during the overlap before any capital.
+
+**What would change my mind**
+- **Pursue it:** ICE leads ZCE by at least a few minutes, the spread closes within the overlap, and the after-cost backtest passes the pre-registered criteria.
+- **Drop it:** the lead is under a minute, the spread doesn't close within the window, or ZCE isn't accessible. In that case the sugar link is useful for **hedging** (ICE as a proxy for ZCE exposure) but not as a trade.
+
+**Hurdles**
+- **Different products.** ICE #11 is raw cane sugar and ZCE is white sugar, separated by refining margins and China's import tariffs. The spread can drift for months, so only short-term convergence is a candidate.
+- **The window is short:** about 2 hours a day.
+- **Access.** Foreign participation in Chinese commodity futures is restricted (see step 1).
+- **Speed.** If ZCE catches up within seconds, it's a latency race that 1-minute data can't capture.
+
+More detail is in [STRATEGY.md](STRATEGY.md#next-steps-how-wed-check-whether-this-still-works).
 
 ---
 
@@ -209,6 +271,7 @@ python scripts/02_replicate.py --start 2014-09-01 --end "" --tag oos --commoditi
 python scripts/05_trade.py                    # tradability tests
 python scripts/07_t1_diagnosis.py             # why the fade decayed + 09:00-open pilot (chart 2.3)
 python scripts/08_soy_equity.py               # soybean Rule A vs benchmarks, 2010-2014 (chart 2.4)
+python scripts/09_sugar_overlap_pilot.py      # ICE vs ZCE sugar night-session pilot (pair-trade idea)
 python scripts/06_readme_figures.py           # regenerates charts 1.1, 1.2, 2.1, 2.2
 ```
 `src/quantilogram.py` is a standalone numba implementation of the cross-quantilogram and portmanteau test (Han, Linton, Oka & Whang), with stationary-bootstrap inference.

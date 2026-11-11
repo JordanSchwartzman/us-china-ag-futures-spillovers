@@ -1,0 +1,7 @@
+test,slope,t,n,gross_bp,net_bp,hit
+pass-through: ZCE night-open gap ~ ICE move before it,0.07951274762538288,6.006348270550301,162,,,
+carry: ZCE night open->night close ~ ICE move before it,-0.008052888970990704,-0.5167834438605811,162,,,
+carry: ZCE night open->next day close ~ ICE move before it,-0.020111890604865828,-1.0229444749237584,162,,,
+overlap (simultaneous): ZCE night ~ ICE 13->15 UTC,0.15145428426893243,5.7136364441197784,162,,,
+"carry trade |ICE|>=1sd, exit night close",,-0.5858519585746169,29,-3.9256925954818134,-7.662332521872701,0.3793103448275862
+"carry trade |ICE|>=1sd, exit next day close",,-0.45220323186081235,29,-4.022606000357946,-7.759245926748832,0.5172413793103449
