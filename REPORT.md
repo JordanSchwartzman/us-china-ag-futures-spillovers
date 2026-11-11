@@ -60,3 +60,41 @@ An OLS of CN_IN(t+1) on US_D(t) and the CN gap shows the US return carries rever
 
 ## The one hypothesis still worth testing
 In the night-session era, the CN contract that trades **after** the US close is the **09:00 Beijing day-session open** (01:00 UTC). The test: does US_t (or the CN night-session move) predict CN 09:00→15:00, and does the old overreaction reversal survive there? Daily bars can't answer this. Sina's free intraday history covers only about 8 months. That would need either paid CN 1-min data (Wind, TqSdk, JoinQuant, ~2015+) or CN 60-min bars collected forward. The CN→US leg (T2) similarly needs the CBOT 8:30 CT open: Databento GLBX.MDP3 1h bars, 2010+. But CN→US has decayed to ≈0.03–0.05, so it's low priority.
+
+## Why the tradable leg lost its edge (`scripts/07_t1_diagnosis.py`)
+
+![T1 decay](docs/figures/5_t1_decay_light.png)
+
+**1. It decayed around 2010, not 2014.** Corn's out-of-sample failure was the tail end of a decline that started inside the paper's own sample. Pooled reversal slopes, using each commodity's years before its night session:
+
+| | 2006–09 | 2010 → night session | Decay |
+|---|---|---|---|
+| Corn | −0.078 (t −6.3) | −0.014 (t −1.8) | −82% |
+| Wheat | −0.051 (t −3.8) | −0.017 (t −2.0) | −67% |
+| Sugar | −0.070 (t −4.1) | −0.028 (t −2.3) | −60% |
+| Soybeans | −0.076 (t −3.4) | −0.048 (t −3.4) | −37% |
+
+**2. It's maturation, not a volatility regime.**
+- In 2006–09 the reversal lived on high-US-volatility days (pooled slope −0.16, t −6.6) and was absent on low-volatility days.
+- After 2010, high-volatility days *don't* reverse (t −1.2), so a volatility filter wouldn't bring the edge back.
+- The 2008–09 crisis contributed a disproportionate share.
+- Corn also had a policy-specific factor: the state reserve program pinned prices near 2,370 RMB in 2011–15, when CN daytime volatility fell to about 30 bp.
+
+**3. The reversal is an overreaction to US information, not noise at the open.** China's daytime return loads on the part of the opening gap that the US move explains (−0.39 in 2006–09, −0.21 after). The rest of the gap doesn't reverse (≈0). So fading the raw gap (T1g) was the wrong signal: it mixes the real effect with auction noise.
+
+**4. The payoff scales with the size of the US move.** That motivated three rules, with designs fixed from the mechanism. Results are net of 2 ticks:
+
+| Net bp/trade (t) | Soybeans | Sugar | Corn | Wheat |
+|---|---|---|---|---|
+| Base (median split), 2010 → night | −0.1 (−0.1) | 0.2 (0.1) | −8.1 (−6.3) | −2.8 (−1.7) |
+| **A: trade only if US move ≥ 1σ**, 2006–09 | 12.2 (1.6) | 18.2 (2.8) | 14.4 (3.0) | 1.8 (0.3) |
+| **A: trade only if US move ≥ 1σ**, 2010 → night | **11.4 (2.6)** | 4.2 (0.8) | −5.6 (−2.1) | −3.7 (−1.1) |
+
+- Rule A rescues **soybeans**, with stable results in both eras (about 60 trades a year). It doesn't rescue the others.
+- Rule B (sizing by the US move) is the most consistent gross, but too thin net of costs.
+- Rule C (A plus an adaptive "is the anomaly alive" switch) adds nothing over A.
+- *Caveat:* the post-2010 data was looked at during this diagnosis, so these results are contaminated. Judge them by consistency, not by the best cell.
+
+**5. This legacy trade can't be run today.** Soybeans have had a night session since Dec 2014 (corn since 2019). The modern equivalent is the **09:00 Beijing day-session open**, the first CN price after the US close.
+- **Pilot (5 pairs: A/ZS, M/ZM, Y/ZL, C/ZC, SR/SB; Mar–Nov 2026; 819 obs):** the US move after the CN night close (15:00 UTC → US close) *is* priced in at 09:00, with pass-through significant in all 5 pairs. But there's **no reversal**: pooled standardized slope +0.02 ± 0.08. That rules out the 2006–09 effect size (−0.14) but not the post-2010 size (−0.06).
+- *Verdict:* no tradable fade in today's structure on current evidence. The pilot has low power, so the honest next step is to collect CN 60-min bars going forward (Sina only serves about 8 months) or buy history, then retest at n ≈ 2,000.

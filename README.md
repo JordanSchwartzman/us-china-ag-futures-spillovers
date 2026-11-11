@@ -39,6 +39,14 @@ The tradable leg is fading China's daytime move after the US close. It earned 7.
 
 These numbers come from different data (free Sina and Yahoo series vs the paper's licensed vendor) and a shorter sample, yet all 72 lag-1 cells line up with the published values. Table V correlates at 0.97 and Table VI at 0.81. Every sign disagreement is on a cell the paper itself reports as ≈0. The weaker Table VI fit is most likely because Yahoo's "open" is the overnight electronic open, not the floor open the paper used.
 
+### 5. Why it died: China's open stopped overreacting around 2010
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/5_t1_decay_dark.png">
+  <img alt="Yearly CN intraday reversal slope by commodity, and pooled slopes for 2006-09, 2010+, and the 2026 09:00-open pilot" src="docs/figures/5_t1_decay_light.png">
+</picture>
+
+The overreaction shrank by about 60% after 2010, in every commodity, and volatile markets didn't bring it back. That points to the market maturing, not a temporary regime. Trading only on US moves of at least 1σ still worked for soybeans through 2014 (about +11 bp/trade net). But soybeans now have a night session, and a 2026 pilot at today's equivalent entry, the 09:00 Beijing open, shows no reversal. Details are in [REPORT.md](REPORT.md#why-the-tradable-leg-lost-its-edge-scripts07_t1_diagnosispy).
+
 ---
 
 ## More detail
@@ -63,7 +71,8 @@ python scripts/02_replicate.py                # paper sample, about 3 min at B=1
 python scripts/02_replicate.py --start 2014-09-01 --end "" --tag oos --commodities soybeans,corn,sugar --min_cn_volume 2000
 python scripts/03_rolling.py
 python scripts/05_trade.py
-python scripts/06_readme_figures.py           # regenerates the charts above
+python scripts/06_readme_figures.py           # regenerates charts 1-4
+python scripts/07_t1_diagnosis.py             # why the fade decayed + modern 09:00-open pilot (chart 5)
 ```
 `src/quantilogram.py` is a standalone numba implementation of the cross-quantilogram and portmanteau test (Han, Linton, Oka & Whang), with stationary-bootstrap inference.
 
