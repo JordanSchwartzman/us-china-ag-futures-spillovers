@@ -133,6 +133,12 @@ If ZCE reacts to ICE with a lag of minutes rather than seconds, the spread betwe
 2. **Build the spread:** convert ICE #11 (cents/lb, USD) to RMB/tonne with USD/CNH, estimate a rolling hedge ratio within the overlap, and measure how fast deviations close (the half-life).
 3. **Cost-adjusted backtest** over both legs plus FX, entering when the spread is unusually wide and exiting when it normalizes. Use only the overlap window.
 
+**Additional point: weather as a regime filter for the spread.** A pair trade assumes gaps between the two prices close. Weather that hits only one market creates gaps that *don't* close, and those are where pair trades lose money.
+- **ICE-only shocks:** frost or drought in Brazil's main cane region (Center-South; frost risk June–August), and India's monsoon (June–September).
+- **ZCE-only shocks:** cold snaps or typhoons in Guangxi, China's main cane province (its crush runs roughly November–April).
+- **The rule:** don't fade the spread while a one-sided weather shock is active, because that gap is real news, not noise.
+- **How to test it:** label one-sided shock periods from weather data. Use forecast archives for anything used as a signal; reanalysis such as ERA5 can only label shocks after the fact. Then compare the pair trade's results with and without the filter, using the same pre-registered pass/fail criteria.
+
 **Hurdles**
 - **Different products.** ICE #11 is raw cane sugar and ZCE is white sugar, separated by refining margins and China's import tariffs. The spread can drift for months, so only intraday convergence is a candidate.
 - **The window is short:** about 2 hours a day.

@@ -230,6 +230,12 @@ If ZCE lags ICE by even a few minutes, the spread between them should briefly wi
 8. **A one-leg version.** If trading both legs isn't practical, test trading ZCE alone in the direction ICE implies. That's the same signal with half the cost.
 9. **Paper trade forward** for 3–6 months during the overlap before any capital.
 
+**Additional point: weather as a regime filter for the spread.** A pair trade assumes gaps between the two prices close. Weather that hits only one market creates gaps that *don't* close, and those are where pair trades lose money.
+- **ICE-only shocks:** frost or drought in Brazil's main cane region (Center-South; frost risk June–August), and India's monsoon (June–September).
+- **ZCE-only shocks:** cold snaps or typhoons in Guangxi, China's main cane province (its crush runs roughly November–April).
+- **The rule:** don't fade the spread while a one-sided weather shock is active, because that gap is real news, not noise.
+- **How to test it:** label one-sided shock periods from weather data. Use forecast archives for anything used as a signal; reanalysis such as ERA5 can only label shocks after the fact. Then compare the pair trade's results with and without the filter, using the same pre-registered pass/fail criteria.
+
 **What would change my mind**
 - **Pursue it:** ICE leads ZCE by at least a few minutes, the spread closes within the overlap, and the after-cost backtest passes the pre-registered criteria.
 - **Drop it:** the lead is under a minute, the spread doesn't close within the window, or ZCE isn't accessible. In that case the sugar link is useful for **hedging** (ICE as a proxy for ZCE exposure) but not as a trade.

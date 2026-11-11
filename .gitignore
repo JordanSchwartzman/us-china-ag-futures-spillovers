@@ -7,3 +7,8 @@ __pycache__/
 *.pyc
 .DS_Store
 .claude/
+
+# local-only: weather filter test (insignificant, not published)
+scripts/10_weather_labels.py
+scripts/11_weather_ruleA.py
+output/tables/weather_*.csv
