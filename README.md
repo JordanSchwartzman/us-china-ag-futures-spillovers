@@ -14,7 +14,7 @@ This repo replicates the results and tests the tradability of Jiang, Su, Todorov
 
 US futures trade while China is closed, so the US move shows up in China's *next open*. You can't trade China at the moment the US move happens. Since Dec 2014, China's night session opens during US trading hours, which moves where the US information lands.
 
-### 2. The finding: real, and it moved when China changed its trading hours
+### 2. The finding: moved when China changed its trading hours
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/2_regime_shift_dark.png">
   <img alt="Lag-1 US to China cross-quantilogram by return component, paper era vs out of sample" src="docs/figures/2_regime_shift_light.png">
