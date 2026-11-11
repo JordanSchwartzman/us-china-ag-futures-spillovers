@@ -1,93 +1,221 @@
-# US ↔ China agricultural futures spillovers: replicating Jiang et al. (2016)
+# US ↔ China agricultural futures spillovers: replicating Jiang et al. (2016), and going further
 
-This repo replicates the results and tests the tradability of Jiang, Su, Todorova & Roca (2016), *Spillovers and Directional Predictability with a Cross-Quantilogram Analysis: The Case of U.S. and Chinese Agricultural Futures*, Journal of Futures Markets 36(12) ([doi:10.1002/fut.21779](https://doi.org/10.1002/fut.21779)).
+This repo replicates Jiang, Su, Todorova & Roca (2016), *Spillovers and Directional Predictability with a Cross-Quantilogram Analysis: The Case of U.S. and Chinese Agricultural Futures*, Journal of Futures Markets 36(12) ([doi:10.1002/fut.21779](https://doi.org/10.1002/fut.21779)). It then extends the paper in directions the authors didn't take: out-of-sample testing and whether the effect can be traded.
 
-**In one line:** the paper's finding replicates and holds up on 2014–2026 data. As a trade on daily bars, it doesn't work.
+**In one line:** the paper's finding replicates and holds out of sample. As a trade it mostly decayed after 2010. One narrow soybean rule survived until China's night session started in Dec 2014, and a test of the modern equivalent is the main next step.
+
+## At a glance
+
+| | What | Status | Where |
+|---|---|---|---|
+| **Part 1. Replication** | Re-doing the paper's own analysis: cross-quantilogram, decomposition into overnight and intraday, auto-quantilograms, rolling windows | ✅ Done. Matches the published tables (r = 0.97 / 0.81) | [Part 1](#part-1-replication-what-the-paper-did) · [PAPER_NOTES.md](PAPER_NOTES.md) |
+| **Part 2. Beyond the paper** | My extensions: test out of sample to 2026, check whether it's tradable, diagnose why the edge decayed, find a surviving rule, pilot the modern market structure | ✅ Done on free data | [Part 2](#part-2-beyond-the-paper-my-extensions) · [REPORT.md](REPORT.md) · [STRATEGY.md](STRATEGY.md) |
+| **Part 3. Next steps** | Testing whether the strategy still works today. Needs Chinese intraday history | ⏳ Not started (data-limited) | [Part 3](#part-3-next-steps-not-done-yet) |
 
 ---
 
-### 1. The setup: US news reaches China overnight
+## What is a cross-quantilogram?
+
+Ordinary correlation asks: *when the US goes up, does China go up on average?* The cross-quantilogram asks a sharper yes/no question about a specific part of the return distribution:
+
+> *When US soybeans have one of their worst 10% of days, is China more likely to have one of **its** worst 10% of days the next day?*
+
+**How it's built**
+1. **Pick a quantile α for each market.** For example, α = 0.1 means the worst 10% of days, 0.5 means below vs above the median, and 0.9 means everything but the best 10% of days.
+2. **Turn each return series into a hit/no-hit series:** 1 if that day's return is below the market's α-quantile, 0 otherwise. Subtract α so each series averages about zero.
+3. **Correlate China's hits on day *t* with the US hits on day *t − k*.** That correlation is the cross-quantilogram, ρ<sub>α</sub>(k), and it runs from −1 to +1.
+
+$$\hat\rho_\alpha(k)=\frac{\sum_t \psi_{\alpha}\big(r^{CN}_t-\hat q^{CN}\big)\,\psi_{\alpha}\big(r^{US}_{t-k}-\hat q^{US}\big)}{\sqrt{\sum_t \psi_{\alpha}^2\big(r^{CN}_t-\hat q^{CN}\big)}\sqrt{\sum_t \psi_{\alpha}^2\big(r^{US}_{t-k}-\hat q^{US}\big)}},\qquad \psi_\alpha(u)=\mathbf 1[u<0]-\alpha$$
+
+**Reading it**
+- **ρ = 0:** knowing the US was in its tail tells you nothing about China's tail *k* days later.
+- **ρ > 0:** the tails line up. A bad US day predicts a bad China day.
+- **ρ < 0:** they move against each other.
+
+When both markets use the same α, there's a direct translation into probabilities: **P(China hit | US hit) = α + ρ·(1 − α)**. For example, from this replication:
+- **Soybeans, α = 0.1, lag 1, ρ ≈ 0.20:** after one of the US's worst-10% days, China has one of *its* worst-10% days **28%** of the time, vs 10% normally.
+- **Soybeans, China overnight return, α = 0.5, ρ ≈ 0.35:** after a below-median US day, China *opens* below its median **67%** of the time, vs 50%.
+
+**Why use it instead of correlation**
+- **Tails separately:** markets can be linked differently in crashes than on normal days, so you can measure the bottom 10%, the middle and the top 10% one at a time.
+- **Direction and timing:** the lag *k* tells you *who leads whom* and for how long.
+- **Robust to outliers:** it only uses hit/no-hit, so a single extreme move or a bad data print can't dominate the result the way it can with ordinary correlation.
+
+**Is it significant?** We resample blocks of consecutive days (a "stationary bootstrap", which keeps volatility clustering intact) to see how large ρ gets by pure chance when there's no link. That range is the dashed band in the charts, and a ρ outside it is significant at 5%. A companion portmanteau test (Q) checks lags 1 through 20 jointly. A plain *quantilogram* is the same measure applied to one market against its own past, which is how the paper checks for self-predictability.
+
+*Source: Han, Linton, Oka & Whang (2016), "The cross-quantilogram". Implementation: [`src/quantilogram.py`](src/quantilogram.py).*
+
+---
+
+## Part 1. Replication: what the paper did
+
+**The paper's question:** do US soybean, wheat, corn and sugar futures returns predict Chinese ones (and vice versa), separately for bad, normal and good days? Their sample runs to Aug 2014.
+
+**What I replicated**
+
+| Paper item | What it shows | Replicated? |
+|---|---|---|
+| Tab III / IV | Samples and descriptive statistics | ✅ Same structure. My sample is shorter (see below). |
+| Figs 4–5 | Cross-quantilograms, lags 1–20, US→CN and CN→US | ✅ Same pattern: a significant 1-day effect only, stronger US→CN |
+| Figs 6–7 | Auto-quantilograms (self-predictability) | ✅ Same. Also visible: tail clustering at longer lags (volatility clustering), which the paper doesn't discuss |
+| **Tab V** | US daily → CN daily / overnight / intraday at lag 1 | ✅ **r = 0.97 with the published values**. CN overnight ≈ 2× daily, CN intraday negative at the median. |
+| **Tab VI** | CN daily → US daily / overnight / intraday at lag 1 | ✅ **r = 0.81**, all signs match |
+| Figs 8–11 | Rolling 2-year windows | ✅ Same: strongest in the 2008–09 crisis, US→CN most persistent for soybeans and sugar |
+| Footnote 9 | All 25 quantile pairs | ✅ Reproduced as a heatmap |
+
+**The paper's conclusion I confirm:** US moves spill into China the next day, mainly through China's *overnight* return (close → next open), and China's daytime session partly reverses that.
+
+**Where my replication differs from the paper**
+- **Data:** I used free data (Sina for China, Yahoo for the US) instead of the paper's licensed vendor.
+- **Sample start:** 2005 instead of 1999 for soybeans (2003 for wheat and corn).
+- **Rolls:** contract rolls are detected and removed instead of the paper's exact roll rule.
+- **US open price:** Yahoo's US "open" is the overnight electronic open, not the floor open the paper used. That's the likely reason Table VI fits less well.
+
+### 1.1 The setup: US news reaches China overnight
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/1_timing_dark.png">
   <img alt="Trading-hours timeline for China and US futures, before and after China's night sessions" src="docs/figures/1_timing_light.png">
 </picture>
 
-US futures trade while China is closed, so the US move shows up in China's *next open*. You can't trade China at the moment the US move happens. Since Dec 2014, China's night session opens during US trading hours, which moves where the US information lands.
+The top row is the paper's setting (its Fig. 3): US futures trade while China is closed, so the US move shows up in China's *next open*. The bottom row is what changed after the paper's sample (see Part 2).
 
-### 2. The finding: moved when China changed its trading hours
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/2_regime_shift_dark.png">
-  <img alt="Lag-1 US to China cross-quantilogram by return component, paper era vs out of sample" src="docs/figures/2_regime_shift_light.png">
-</picture>
-
-- **Paper era (blue):** US day *t* predicts China's overnight return strongly (ρ ≈ 0.35–0.51). China's daytime session then partly reverses it (negative intraday ρ).
-- **After 2014 (orange):** the daily spillover persists, and in sugar it got stronger. But it moved out of "overnight" into "intraday". Once China's open prints during US hours, that's exactly what the timing predicts. Seeing it in data the authors never had is the strongest evidence the effect is real.
-
-### 3. The trade: an in-sample edge that went to zero
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/3_trade_oos_dark.png">
-  <img alt="Corn intraday-fade cumulative return, in-sample vs out-of-sample" src="docs/figures/3_trade_oos_light.png">
-</picture>
-
-The tradable leg is fading China's daytime move after the US close. It earned 7.9 bp/day (t = 5.2) during the paper's sample, then **≈0 bp/day (t = 0.09)** afterwards. The test has no look-ahead: thresholds come from past data only, and a 1-day-stale signal earns nothing. After about 10 bp of round-trip costs it loses money in both periods.
-
-### 4. The replication matches the published tables
+### 1.2 The replication matches the published tables
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/4_replication_dark.png">
   <img alt="Scatter of replicated vs published lag-1 cross-quantilogram values" src="docs/figures/4_replication_light.png">
 </picture>
 
-These numbers come from different data (free Sina and Yahoo series vs the paper's licensed vendor) and a shorter sample, yet all 72 lag-1 cells line up with the published values. Table V correlates at 0.97 and Table VI at 0.81. Every sign disagreement is on a cell the paper itself reports as ≈0. The weaker Table VI fit is most likely because Yahoo's "open" is the overnight electronic open, not the floor open the paper used.
+All 72 lag-1 cells from Tables V and VI line up with the published values. Every sign disagreement is on a cell the paper itself reports as ≈0. The paper-sample figures equivalent to its Figs 4–11 are in [`output/figs/paper/`](output/figs/paper) and [`output/figs/rolling/`](output/figs/rolling).
 
-### 5. Why it died: China's open stopped overreacting around 2010
+---
+
+## Part 2. Beyond the paper: my extensions
+
+The paper stops in 2014 and makes no trading claims. Everything in this part is new.
+
+| Extension | Question | Answer |
+|---|---|---|
+| 2.1 Out of sample | Does the spillover survive 2014–2026? | **Yes.** It also moved where the timing predicts once China added night sessions. |
+| 2.2 Tradability | Can you trade it with daily bars? | The overnight part isn't tradable. The intraday fade had an edge that **went to zero** out of sample. |
+| 2.3 Diagnosis | Why did the edge disappear? | China's open **stopped overreacting around 2010**. That's market maturation, not a volatility regime. |
+| 2.4 Surviving rule | Does any version still work? | **Soybeans, ≥1σ US moves only**: +7.3%/yr, Sharpe 1.16, 2010–2014 (in-sample) |
+| 2.5 Modern pilot | Does it work in today's market structure? | No reversal in an 8-month pilot, but **too little data to conclude** |
+
+### 2.1 Out of sample: the spillover is real, and it moved when China changed its trading hours
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/2_regime_shift_dark.png">
+  <img alt="Lag-1 US to China cross-quantilogram by return component, paper era vs out of sample" src="docs/figures/2_regime_shift_light.png">
+</picture>
+
+- **Blue (paper era, replicated):** US day *t* predicts China's overnight return strongly. China's daytime session then partly reverses it.
+- **Orange (2014–2026, new):** the daily spillover persists, and in sugar it got stronger. But it moved out of "overnight" into "intraday". Once China's open prints during US hours (night sessions from Dec 2014), that's exactly what the timing predicts. Seeing it in data the authors never had is the strongest evidence the effect is real.
+
+### 2.2 Tradability: an in-sample edge that went to zero
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/3_trade_oos_dark.png">
+  <img alt="Corn intraday-fade cumulative return, in-sample vs out-of-sample" src="docs/figures/3_trade_oos_light.png">
+</picture>
+
+You can't trade the overnight spillover: it happens while China is closed. The tradable leg is fading China's *daytime* move after the US close. Corn is the clean out-of-sample test, because it had no night session until 2019. The fade earned 7.9 bp/day (t = 5.2) during the paper's sample, then **≈0 bp/day (t = 0.09)** afterwards. The test has no look-ahead: thresholds come from past data only, and a 1-day-stale signal earns nothing.
+
+### 2.3 Diagnosis: China's open stopped overreacting around 2010
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/5_t1_decay_dark.png">
   <img alt="Yearly CN intraday reversal slope by commodity, and pooled slopes for 2006-09, 2010+, and the 2026 09:00-open pilot" src="docs/figures/5_t1_decay_light.png">
 </picture>
 
-The overreaction shrank by about 60% after 2010, in every commodity, and volatile markets didn't bring it back. That points to the market maturing, not a temporary regime. Trading only on US moves of at least 1σ still worked for soybeans through 2014 (about +11 bp/trade net). But soybeans now have a night session, and a 2026 pilot at today's equivalent entry, the 09:00 Beijing open, shows no reversal. Details are in [REPORT.md](REPORT.md#why-the-tradable-leg-lost-its-edge-scripts07_t1_diagnosispy).
+- **It decayed around 2010, inside the paper's own sample.** The overreaction shrank by about 60% in every commodity.
+- **Volatility doesn't bring it back.** In 2006–09 the reversal lived on volatile days. After 2010, volatile days don't reverse either, which points to market maturation rather than a temporary regime.
+- **It's an overreaction to US information specifically.** China's daytime session reverses only the part of its opening jump that the US move explains, which is why fading China's raw gap never worked.
 
-### 6. The surviving rule: soybeans, only after a ≥1σ US move (2010–2014)
+Details are in [REPORT.md](REPORT.md#why-the-tradable-leg-lost-its-edge-scripts07_t1_diagnosispy).
+
+### 2.4 The surviving rule: soybeans, only after a ≥1σ US move (2010–2014)
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/6_soy_equity_dark.png">
-  <img alt="Soybean Rule A net equity curve 2010-2014 vs trading every day" src="docs/figures/6_soy_equity_light.png">
+  <img alt="Soybean Rule A net equity curve 2010-2014 vs benchmarks and buy-and-hold" src="docs/figures/6_soy_equity_light.png">
 </picture>
 
 **Rule A:** when CBOT soybeans close up or down at least 1σ (trailing 60-day vol), take the *opposite* side in DCE soybeans at the next open, and exit at that day's close. Otherwise stay flat.
-- **2010 to Dec 2014:** 317 trades, +11.4 bp/trade net (t 2.6), +7.3%/yr, Sharpe 1.16, max drawdown −8%. The benchmark, the same fade traded every day (short DCE after an above-median US day, long after a below-median one), made −0.3%/yr with a −41% drawdown. Passively buying DCE's open and selling its close made −9.4%/yr after costs, and buy-and-hold of DCE soybeans made +1.8%/yr (Sharpe 0.13, −15% drawdown).
-- **Why these rules:** China's open overreacts to the US move, and only on big moves is the reversal larger than costs. Soybeans decayed least of the four commodities.
-- **Caveats:** this is in-sample, most of the return comes from 2012 and 2014, and it can't be run as built after the Dec 2014 night session.
 
-**[STRATEGY.md](STRATEGY.md)** has the full rules, the reasoning behind each one, what was rejected, and how we'd test whether it still works with more data.
+| 2010 → Dec 2014 | Per year | Sharpe | Max drawdown |
+|---|---|---|---|
+| **Rule A** (after costs) | **+7.3%** | **1.16** | −8.0% |
+| Same fade, every day (after costs) | −0.3% | −0.03 | −40.9% |
+| Buy & hold DCE soybeans (no costs) | +1.8% | 0.13 | −15.1% |
+
+- **Why these rules:** China's open overreacts to the US move, and only on big moves is the reversal larger than costs. Soybeans decayed least of the four commodities.
+- **Caveats:** it's in-sample (the rule and the 2010 start were chosen after seeing this period), most of the return comes from 2012 and 2014, and it can't be run as built after the Dec 2014 night session.
+
+Full rules, the reasoning behind each, rejected variants and benchmark definitions are in **[STRATEGY.md](STRATEGY.md)**.
+
+### 2.5 Modern-structure pilot (09:00 Beijing open)
+Since Dec 2014, the first Chinese price after the US close is the **09:00 day-session open**. I ran a pilot on free intraday data (5 commodity pairs, Mar–Nov 2026, 819 days).
+- China's open *does* absorb the late US move.
+- There's **no reversal**: pooled slope +0.02 ± 0.08.
+- For soybeans, Rule A's modern version lost money on 38 trades.
+
+That's too small a sample to conclude anything, which is what Part 3 is for.
 
 ---
 
-## More detail
-- **[STRATEGY.md](STRATEGY.md)** has the trading rules and their rationale, plus the validation plan for more data.
-- **[REPORT.md](REPORT.md)** has full results, trade statistics, data caveats, and the one hypothesis still worth testing.
-- **[PAPER_NOTES.md](PAPER_NOTES.md)** has the page-by-page summary of the paper, its method, its data, and every target number.
-- **`output/`** has all the replication figures (the paper's Figs 4–11 equivalents) and the CSV tables.
+## Part 3. Next steps (not done yet)
+
+The open question is **whether Rule A, or its opposite, works in today's market structure.** Answering it needs data that isn't free.
+
+**Data I'd need**
+- **Chinese 1-minute bars, 2010 → now,** for DCE soybeans, soymeal and soyoil, corn, and ZCE sugar. This is the binding constraint: free sources keep only about 8 months. Vendors: Wind, TqSdk, JoinQuant, RiceQuant, Tushare Pro.
+- **CBOT intraday, 2010 → now:** Databento.
+- **Chinese order-book data at the open and close,** for realistic fills.
+
+**How I'd validate it**
+1. **Pre-register:** freeze the rule and the pass/fail criteria in a commit *before* touching new data.
+2. **Re-run 2010–14 on clean intraday data.** If the edge disappears, it was a free-data artifact. Stop.
+3. **Test the modern version:** signal = the US move after China's night close; trade = 09:00 → 15:00. This is the real out-of-sample test.
+4. **Robustness:** vary the threshold (0.75–1.5σ), the vol window, and entry/exit timing. Results should form a plateau, not a spike.
+5. **Other markets:** repeat on soymeal, soyoil, corn and sugar.
+6. **Adjust the statistics for every variant tried:** White's Reality Check or Hansen's SPA, and a deflated Sharpe ratio.
+7. **Walk-forward:** refit only the threshold once a year on past data.
+8. **Execution:** model auction fills, limit-move days, fees and capacity.
+9. **Paper trade forward for 6–12 months,** using a daily data collector.
+10. **Set kill criteria** before any live trading.
+
+**What would change my mind:**
+- **Pursue it:** clean data confirms 2010–14, *and* the 09:00-open version shows a reversal with t < −2.
+- **Drop it:** either one fails. The US → China spillover would then be information, not a trade.
+
+Full detail is in [STRATEGY.md](STRATEGY.md#next-steps-how-wed-check-whether-this-still-works).
+
+---
 
 ## How it was validated
 1. **Engine:** the hand-computed statistic matches, a planted signal is detected, and the false-positive rate on independent series is ~6–8% at nominal 5% (slightly hot, documented).
 2. **Timing alignment:** verified on synthetic index data.
 3. **Data cleaning:** contract rolls and bad prints are removed. No Chinese daily return exceeds the exchange price limit.
-4. **Replication:** all 72 published cells compared, as in chart 4.
+4. **Replication:** all 72 published cells compared (chart 1.2).
 5. **Look-ahead audit:** a stale signal kills the edge.
 6. **Out of sample:** 2014–2026, including the night-session regime change.
+
+## Documents
+- **[PAPER_NOTES.md](PAPER_NOTES.md):** the paper page by page, its method and data, and every target number (Part 1).
+- **[REPORT.md](REPORT.md):** full results for the replication, out-of-sample tests, trade tests and diagnosis (Parts 1–2).
+- **[STRATEGY.md](STRATEGY.md):** the trading rules and why, benchmarks, and the validation plan (Parts 2.4 and 3).
+- **`output/`:** all figures and CSV tables.
 
 ## Run
 ```bash
 pip install -r requirements.txt
 python tests/test_quantilogram.py
+# Part 1: replication
 python scripts/01_fetch.py                    # caches data to data/raw/
 python scripts/02_replicate.py                # paper sample, about 3 min at B=1000
+python scripts/03_rolling.py                  # rolling windows (paper era + extension to 2026)
+# Part 2: extensions
 python scripts/02_replicate.py --start 2014-09-01 --end "" --tag oos --commodities soybeans,corn,sugar --min_cn_volume 2000
-python scripts/03_rolling.py
-python scripts/05_trade.py
-python scripts/06_readme_figures.py           # regenerates charts 1-4
-python scripts/07_t1_diagnosis.py             # why the fade decayed + modern 09:00-open pilot (chart 5)
-python scripts/08_soy_equity.py               # soybean Rule A equity curve, 2010-2014 (chart 6)
+python scripts/05_trade.py                    # tradability tests
+python scripts/07_t1_diagnosis.py             # why the fade decayed + 09:00-open pilot (chart 2.3)
+python scripts/08_soy_equity.py               # soybean Rule A vs benchmarks, 2010-2014 (chart 2.4)
+python scripts/06_readme_figures.py           # regenerates charts 1.1, 1.2, 2.1, 2.2
 ```
 `src/quantilogram.py` is a standalone numba implementation of the cross-quantilogram and portmanteau test (Han, Linton, Oka & Whang), with stationary-bootstrap inference.
 
