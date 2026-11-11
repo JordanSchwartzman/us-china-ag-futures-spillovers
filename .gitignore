@@ -1,0 +1,9 @@
+# copyrighted paper PDF (Wiley) — not redistributable
+*.pdf
+# vendor data (Sina/akshare, Yahoo) — regenerate with scripts/01_fetch.py
+data/
+output/logs/
+__pycache__/
+*.pyc
+.DS_Store
+.claude/
