@@ -9,7 +9,7 @@ This repo replicates Jiang, Su, Todorova & Roca (2016), *Spillovers and Directio
 | | What | Status | Where |
 |---|---|---|---|
 | **Part 1. Replication** | Re-doing the paper's own analysis: cross-quantilogram, decomposition into overnight and intraday, auto-quantilograms, rolling windows | Done. Matches the published tables (r = 0.97 / 0.81) | [Part 1](#part-1-replication-what-the-paper-did) · [PAPER_NOTES.md](PAPER_NOTES.md) |
-| **Part 2. Beyond the paper** | My extensions: test out of sample to 2026, check whether it's tradable, diagnose why the edge decayed, find a surviving rule, pilot the modern market structure | Done on free data | [Part 2](#part-2-beyond-the-paper-my-extensions) · [REPORT.md](REPORT.md) · [STRATEGY.md](STRATEGY.md) |
+| **Part 2. Beyond the paper** | My extensions: test out of sample to 2026, check whether it's tradable, diagnose why the edge decayed, find a surviving rule, pilot the modern market structure, test whether weather drives China's reaction | Done on free data | [Part 2](#part-2-beyond-the-paper-my-extensions) · [REPORT.md](REPORT.md) · [STRATEGY.md](STRATEGY.md) |
 | **Next steps** | Test the soybean rule in today's market structure, and an ICE vs ZCE sugar pair trade | Not started (needs minute-level data) | [Next steps](#next-steps) · [STRATEGY.md](STRATEGY.md) |
 
 ---
@@ -107,6 +107,7 @@ The paper stops in 2014 and makes no trading claims. Everything in this part is 
 | 2.3 Diagnosis | Why did the edge disappear? | China's open **stopped overreacting around 2010**. That's market maturation, not a volatility regime. |
 | 2.4 Surviving rule | Does any version still work? | **Soybeans, ≥1σ US moves only**: +7.3%/yr, Sharpe 1.16, 2010–2014 (in-sample) |
 | 2.5 Modern pilot | Does it work in today's market structure? | No reversal in an 8-month pilot, but **too little data to conclude** |
+| 2.6 Weather | Was weather the reason China's prices moved? | **No.** China reacted the same way to weather-driven and other big US moves. |
 
 ### 2.1 Out of sample: the spillover is real, and it moved when China changed its trading hours
 <picture>
@@ -172,6 +173,27 @@ Since Dec 2014, the first Chinese price after the US close is the **09:00 day-se
 - For soybeans, Rule A's modern version lost money on 38 trades.
 
 That's too small a sample to conclude anything.
+
+### 2.6 Was weather the reason China's prices moved? (tested: no)
+**Question:** does China's open react differently when the big US move was driven by a change in the weather forecast, rather than by other news (demand, trade, macro, USDA reports)?
+
+**How:**
+- **Weather score:** NOAA's 6–10 and 8–14 day outlooks, archived as issued (free, from 2012), give a daily Corn Belt "hotter/drier than normal" score.
+- **Labeling:** each day's revision is issued around 3pm ET, after the CBOT close and before China opens. It labels each ≥1σ US move as weather-driven (a large revision in the same direction as the move) or not.
+- **The label works:** in June–August, the revisions line up with same-day CBOT corn moves (corr 0.23, t 5.7).
+
+**Result (corn, June–August 2012–2018, 443 days; DCE corn had no night session until 2019):**
+
+| | China's daytime reversal of the US move | Rule A fade, before costs |
+|---|---|---|
+| US move not weather-driven | −0.044 (t −2.5) | +9.7 bp (107 trades) |
+| US move weather-driven | −0.044 (difference −0.0003, t −0.01) | +15.2 bp (39 trades), difference p = 0.65 |
+
+The result is the same under four alternative label definitions (all |t| < 1).
+
+**Conclusion:** China's open reacted to big US moves the same way whatever the cause. Weather-driven supply news wasn't treated differently from other supply, demand or macro news. A weather label doesn't isolate a distinct group of moves, so it isn't a useful filter for Rule A.
+
+*Soybeans:* the weather score didn't track daily CBOT soybean moves over 2012–2014 (corr 0.04), the only window before the DCE soybean night session. So the soybean version can't be tested with this data. Scripts: [`10_weather_labels.py`](scripts/10_weather_labels.py), [`11_weather_ruleA.py`](scripts/11_weather_ruleA.py).
 
 ---
 
@@ -278,6 +300,8 @@ python scripts/05_trade.py                    # tradability tests
 python scripts/07_t1_diagnosis.py             # why the fade decayed + 09:00-open pilot (chart 2.3)
 python scripts/08_soy_equity.py               # soybean Rule A vs benchmarks, 2010-2014 (chart 2.4)
 python scripts/09_sugar_overlap_pilot.py      # ICE vs ZCE sugar night-session pilot (pair-trade idea)
+python -I scripts/10_weather_labels.py 2012-01-01 2018-12-31   # NOAA CPC outlooks -> Corn Belt weather score
+python scripts/11_weather_ruleA.py corn       # weather-driven vs other US moves (section 2.6)
 python scripts/06_readme_figures.py           # regenerates charts 1.1, 1.2, 2.1, 2.2
 ```
 `src/quantilogram.py` is a standalone numba implementation of the cross-quantilogram and portmanteau test (Han, Linton, Oka & Whang), with stationary-bootstrap inference.
